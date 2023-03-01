@@ -1,61 +1,49 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { customAlphabet } from 'nanoid';
 import ContactForm from './modules/ContactForm/ContactForm';
 import Search from './modules/Search/Search';
 import ContactList from './modules/ContactList/ContactList';
-import style from './modules/ContactForm/ContactForm.module.css'
+import style from './modules/ContactForm/ContactForm.module.css';
 
-export class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
-
-  componentDidMount() {
+const App = () => {
+  const [contacts, setContacts] = useState(() => {
     const contacts = JSON.parse(localStorage.getItem('contacts'));
-    if (contacts?.length) {
-      this.setState({ contacts });
-    }
-  }
+    return contacts ? contacts : [];
+  });
+  const [filter, setFilter] = useState('');
 
-  componentDidUpdate(prevProps, prevState) {
-    const { contacts } = this.state;
-    if (prevState.contacts !== contacts) {
-      localStorage.setItem('contacts', JSON.stringify(contacts));
-    }
-  }
+  useEffect(() => {
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
 
-  formSubmitHandler = ({ name, number }) => {
+  const formSubmitHandler = ({ name, number }) => {
     const nanoid = customAlphabet('1234567890', 2);
     const id = 'id-' + nanoid(2);
     const contact = { id, name, number };
-    if (this.isNameExist(name)) {
+    if (isNameExist(name)) {
       alert(`${contact.name} has already added in contacts`);
       return false;
     }
 
-    this.setState(prevState => {
-      return { contacts: [contact, ...prevState.contacts] };
+    setContacts(prevContacts => {
+      return [contact, ...prevContacts];
     });
     return true;
   };
 
-  isNameExist(contName) {
+  const isNameExist = contName => {
     const normalizedName = contName.toLowerCase();
-    const { contacts } = this.state;
     const result = contacts.find(({ name }) => {
       return name.toLowerCase() === normalizedName;
     });
-
     return Boolean(result);
-  }
-
-  changeFilter = e => {
-    this.setState({ filter: e.currentTarget.value });
   };
 
-  getVisibleContacts() {
-    const { contacts, filter } = this.state;
+  const changeFilter = e => {
+    setFilter(e.currentTarget.value);
+  };
+
+  const getVisibleContacts = () => {
     if (!filter) {
       return contacts;
     }
@@ -65,35 +53,34 @@ export class App extends Component {
         name.toLowerCase().includes(normalizedFilter) ||
         number.includes(normalizedFilter)
     );
-  }
-
-  deleteContact = contactID => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== contactID),
-    }));
   };
 
-  render() {
-    const { filter, contacts } = this.state;
-    const isContact = Boolean(contacts.length);
-    const visibleContacts = this.getVisibleContacts();
-
-    return (
-      <>
-        <h1 className={style.title}>Phonebook</h1>
-        <ContactForm onSubmit={this.formSubmitHandler} />
-        <div>
-          <h1 className={style.title}>Contacts</h1>
-          <Search value={filter} onChange={this.changeFilter} />
-          {isContact && (
-            <ContactList
-              visibleContacts={visibleContacts}
-              onDeleteContact={this.deleteContact}
-            />
-          )}
-          {!isContact && <p className={style.title}>No contact in phonebook</p>}
-        </div>
-      </>
+  const deleteContact = contactID => {
+    setContacts(prevState =>
+      prevState.filter(contact => contact.id !== contactID)
     );
-  }
-}
+  };
+
+  const isContact = Boolean(contacts.length);
+  const visibleContacts = getVisibleContacts();
+
+  return (
+    <>
+      <h1 className={style.title}>Phonebook</h1>
+      <ContactForm onSubmit={formSubmitHandler} />
+      <div>
+        <h1 className={style.title}>Contacts</h1>
+        <Search value={filter} onChange={changeFilter} />
+        {isContact && (
+          <ContactList
+            visibleContacts={visibleContacts}
+            onDeleteContact={deleteContact}
+          />
+        )}
+        {!isContact && <p className={style.title}>No contact in phonebook</p>}
+      </div>
+    </>
+  );
+};
+
+export default App;
